@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Twitter, Download, Copy } from "lucide-react";
+import { Share2, Download, Copy } from "lucide-react";
 
 interface Props {
   imageUrl?: string;
@@ -36,7 +36,7 @@ export default function ShareButtons({ imageUrl, title = "Retouched with GlowUp 
   return (
     <div className="flex gap-2 mt-4">
       <Button variant="outline" size="sm" onClick={shareTwitter}>
-        <Twitter className="w-4 h-4 mr-1" /> Share
+        <Share2 className="w-4 h-4 mr-1" /> Share
       </Button>
       <Button variant="outline" size="sm" onClick={shareNative}>
         <Copy className="w-4 h-4 mr-1" /> Share Link
