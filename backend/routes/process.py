@@ -23,6 +23,7 @@ async def process_media(
     file: UploadFile = File(...),
     user_id: str = Form(...),
     media_type: str = Form("photo"),
+    output_format: str = Form("mp4"),
     smoothing: int = Form(50),
     brightening: int = Form(30),
     sharpening: int = Form(20),
@@ -74,7 +75,7 @@ async def process_media(
 
     try:
         if media_type == "video":
-            output_path = BeautyPipeline.process_video(input_path, params)
+            output_path = BeautyPipeline.process_video(input_path, params, output_format=output_format)
         else:
             output_path = BeautyPipeline.process_photo(input_path, params)
 

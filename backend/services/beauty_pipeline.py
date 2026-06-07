@@ -321,20 +321,29 @@ class BeautyPipeline:
         video_path: str,
         params: BeautyParams,
         regions: Optional[List[Region]] = None,
+        output_format: str = "mp4",
     ) -> str:
         """
         Frame-by-frame beauty processing for video.
-        Uses bilateral + frequency separation per frame.
+        Uses ffmpeg for ProRes export, OpenCV for MP4.
+        
+        Supported formats: mp4 (H.264), mov (ProRes 422), prores (ProRes 4444)
         """
+        import subprocess, tempfile, os
+
         cap = cv2.VideoCapture(video_path)
-        fps = int(cap.get(cv2.CAP_PROP_FPS))
+        fps = cap.get(cv2.CAP_PROP_FPS) or 24
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-        output_path = video_path.replace(".", "_beauty.")
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+        # Detect input format from extension
+        input_ext = os.path.splitext(video_path)[1].lower()
+        is_prores_input = input_ext in (".mov", ".prores")
 
+        output_path = video_path.replace(input_ext, f"_beauty{'.mov' if output_format != 'mp4' else '.mp4'}")
+
+        # Precompute region mask
         if regions and len(regions) > 0:
             mask = BeautyPipeline.generate_region_mask((height, width), regions)
             mask = cv2.GaussianBlur(mask, (15, 15), 8)
@@ -342,25 +351,77 @@ class BeautyPipeline:
         else:
             mask_3ch = None
 
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                break
+        if output_format in ("prores", "mov"):
+            # ProRes export via ffmpeg pipe
+            ffmpeg_cmd = [
+                "ffmpeg", "-y",
+                "-f", "rawvideo", "-vcodec", "rawvideo",
+                "-s", f"{width}x{height}", "-pix_fmt", "bgr24",
+                "-r", str(fps), "-i", "pipe:0",
+                "-c:v", "prores_ks",
+                "-profile:v", "3" if output_format == "prores" else "2",
+                "-pix_fmt", "yuv422p10le",
+                "-vendor", "ap10",
+                output_path,
+            ]
+            proc = subprocess.Popen(ffmpeg_cmd, stdin=subprocess.PIPE)
 
-            processed = FlameBeautyBox.surface_blur(
-                frame, d=7, sigma_color=60, sigma_space=60
-            )
+            frame_count = 0
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                processed = BeautyPipeline._beauty_frame(frame, params)
+                if mask_3ch is not None:
+                    processed = (processed.astype(np.float32) * mask_3ch +
+                                 frame.astype(np.float32) * (1.0 - mask_3ch))
+                    processed = np.clip(processed, 0, 255).astype(np.uint8)
+                proc.stdin.write(processed.tobytes())
+                frame_count += 1
 
-            if mask_3ch is not None:
-                processed = (processed.astype(np.float32) * mask_3ch +
-                             frame.astype(np.float32) * (1.0 - mask_3ch))
-                processed = np.clip(processed, 0, 255).astype(np.uint8)
+            proc.stdin.close()
+            proc.wait()
 
-            out.write(processed)
+        else:
+            # MP4 export via OpenCV
+            fourcc = cv2.VideoWriter_fourcc(*"avc1")
+            out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                processed = BeautyPipeline._beauty_frame(frame, params)
+                if mask_3ch is not None:
+                    processed = (processed.astype(np.float32) * mask_3ch +
+                                 frame.astype(np.float32) * (1.0 - mask_3ch))
+                    processed = np.clip(processed, 0, 255).astype(np.uint8)
+                out.write(processed)
+
+            out.release()
 
         cap.release()
-        out.release()
         return output_path
+
+    @staticmethod
+    def _beauty_frame(frame: np.ndarray, params: BeautyParams) -> np.ndarray:
+        """Apply beauty effects to a single frame (without region masking)."""
+        result = frame.copy()
+        smoothing = params.smoothing / 100.0
+        if smoothing > 0:
+            d = max(3, int(smoothing * 15) | 1)
+            result = FlameBeautyBox.surface_blur(result, d=d, sigma_color=smoothing * 150, sigma_space=smoothing * 150)
+        if params.blemish_removal > 0:
+            result = FlameBlemishRemoval.remove_blemishes(result, strength=params.blemish_removal)
+        sharpening = params.sharpening / 100.0
+        if sharpening > 0:
+            result = FlameDetailEnhance.high_pass_sharpen(result, radius=max(1.0, sharpening * 5), amount=sharpening * 0.5, threshold=2.0)
+        brightening = params.brightening / 100.0
+        if brightening > 0:
+            hsv = cv2.cvtColor(result, cv2.COLOR_BGR2HSV).astype(np.float32)
+            hsv[:, :, 2] = np.clip(hsv[:, :, 2] * (1.0 + brightening * 0.4), 0, 255)
+            result = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
+        return result
 
 
 # Convenience: expose classes at module level for direct API
