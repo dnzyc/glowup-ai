@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from routes import process, jobs, webhooks, stripe_routes
+from routes import process, jobs, webhooks, stripe_routes, admin
 from services.rate_limit import rate_limiter
 
 app = FastAPI(title="GlowUp AI", version="1.0.0")
@@ -24,6 +24,7 @@ app.include_router(process.router, prefix="/api")
 app.include_router(jobs.router, prefix="/api")
 app.include_router(webhooks.router, prefix="/api")
 app.include_router(stripe_routes.router, prefix="/api")
+app.include_router(admin.router, prefix="/api")
 
 
 @app.get("/")

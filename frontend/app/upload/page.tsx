@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import Uploader from "@/components/Uploader";
 import RegionSelector from "@/components/RegionSelector";
 import BeautyControls from "@/components/BeautyControls";
+import LivePreview from "@/components/LivePreview";
+import FaceDetector from "@/components/FaceDetector";
+import PresetManager from "@/components/PresetManager";
 import { Button } from "@/components/ui/button";
 import { Region, BeautyParams } from "@/types";
 import { Sparkles } from "lucide-react";
@@ -15,6 +18,8 @@ export default function UploadPage() {
   const [regions, setRegions] = useState<Region[]>([]);
   const [params, setParams] = useState<BeautyParams>({ smoothing: 50, brightening: 30, sharpening: 20, blemishRemoval: 0 });
   const [processing, setProcessing] = useState(false);
+  const [autoDetect, setAutoDetect] = useState(true);
+  const [livePreviewEnabled, setLivePreviewEnabled] = useState(false);
   const router = useRouter();
 
   async function handleProcess() {
@@ -49,9 +54,16 @@ export default function UploadPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
             <RegionSelector imageUrl={previewUrl} regions={regions} onRegionsChange={setRegions} />
+            <div className="flex items-center gap-2 mt-4">
+              <input type="checkbox" id="live-preview" checked={livePreviewEnabled}
+                onChange={(e) => setLivePreviewEnabled(e.target.checked)} />
+              <label htmlFor="live-preview" className="text-sm cursor-pointer">Live preview beauty effects</label>
+            </div>
+            {livePreviewEnabled && <LivePreview imageUrl={previewUrl!} params={params} enabled={livePreviewEnabled} />}
           </div>
           <div className="space-y-4">
             <BeautyControls params={params} onChange={setParams} />
+            <PresetManager currentParams={params} onLoad={setParams} />
             <Button className="w-full" size="lg" onClick={handleProcess} disabled={processing}>
               <Sparkles className="w-4 h-4 mr-2" />
               {processing ? "Processing..." : "Apply Beauty"}
@@ -62,6 +74,11 @@ export default function UploadPage() {
           </div>
         </div>
       )}
+      <div className="flex items-center gap-2 mt-2">
+        <input type="checkbox" id="auto-detect" checked={autoDetect} onChange={(e) => setAutoDetect(e.target.checked)} />
+        <label htmlFor="auto-detect" className="text-xs cursor-pointer">Auto-detect face regions</label>
+      </div>
+      <FaceDetector imageUrl={previewUrl!} enabled={autoDetect} onRegionsDetected={(r) => setRegions(prev => prev.length === 0 ? r : prev)} />
     </div>
   );
 }

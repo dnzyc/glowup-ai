@@ -13,8 +13,27 @@ export default function Uploader({ onFileSelected }: Props) {
 
   function handleFile(file: File) {
     if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) return;
-    const url = URL.createObjectURL(file);
-    onFileSelected(file, url);
+
+    if (file.type.startsWith("video/")) {
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      video.src = URL.createObjectURL(file);
+      video.onloadeddata = () => {
+        video.currentTime = 1;
+      };
+      video.onseeked = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext("2d")!.drawImage(video, 0, 0);
+        const frameUrl = canvas.toDataURL("image/jpeg", 0.8);
+        URL.revokeObjectURL(video.src);
+        onFileSelected(file, frameUrl);
+      };
+    } else {
+      const url = URL.createObjectURL(file);
+      onFileSelected(file, url);
+    }
   }
 
   return (
@@ -35,17 +54,11 @@ export default function Uploader({ onFileSelected }: Props) {
         onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
       />
       <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-      <p className="text-lg font-medium mb-2">Drop your photo or video here</p>
-      <p className="text-sm text-muted-foreground">
-        Supports JPG, PNG, MP4, MOV up to 500MB
-      </p>
+      <p className="text-lg font-medium mb-2">Drop photo or video here</p>
+      <p className="text-sm text-muted-foreground">JPG, PNG, MP4, MOV — up to 500MB</p>
       <div className="flex gap-4 justify-center mt-4">
-        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-          <FileImage className="w-3 h-3" /> Photo
-        </span>
-        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Film className="w-3 h-3" /> Video
-        </span>
+        <span className="flex items-center gap-1 text-xs text-muted-foreground"><FileImage className="w-3 h-3" /> Photo</span>
+        <span className="flex items-center gap-1 text-xs text-muted-foreground"><Film className="w-3 h-3" /> Video</span>
       </div>
     </Card>
   );
