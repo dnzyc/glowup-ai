@@ -5,16 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Check, Sparkles } from "lucide-react";
 
 const PLANS = [
-  { name: "Starter", price: "$5", credits: 10, features: ["Photo beauty processing", "Face smoothing", "Region selection"] },
-  { name: "Pro", price: "$20", credits: 50, features: ["Photo + Video", "Full region selection", "Advanced beauty params", "Priority queue"], highlight: true },
-  { name: "Studio", price: "$50", credits: 150, features: ["Everything in Pro", "4K exports", "Batch processing", "Custom presets"] },
+  { name: "Starter", price: "$9.90", credits: 100, priceId: "price_1TfmUyPTpXR1yLhaKZKfd7HS", features: ["Photo beauty processing", "Face smoothing", "Region selection"] },
+  { name: "Pro", price: "$24.90", credits: 300, priceId: "price_1TfmV3PTpXR1yLhaqf7f86sU", features: ["Photo + Video", "Full region selection", "Advanced beauty params", "Priority queue"], highlight: true },
+  { name: "Studio", price: "$99.90", credits: 1000, priceId: "price_1TfmV5PTpXR1yLhajtqbWvpk", features: ["Everything in Pro", "4K exports", "Batch processing", "Custom presets"] },
 ];
 
 export default function PricingCards() {
   async function handlePurchase(planName: string) {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/stripe/checkout`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ price_id: planName.toLowerCase(), user_id: "guest" }),
+      body: JSON.stringify({ price_id: PLANS.find(p => p.name === planName)?.priceId, user_id: "guest" }),
     });
     const { url } = await res.json();
     if (url) window.location.href = url;
