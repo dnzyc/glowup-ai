@@ -14,7 +14,7 @@ class AIFallbackService:
         try:
             from config import REPLICATE_API_TOKEN
             return bool(REPLICATE_API_TOKEN)
-        except:
+        except ImportError:
             return False
     
     @staticmethod

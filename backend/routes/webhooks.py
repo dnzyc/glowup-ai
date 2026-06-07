@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request
-from config import STRIPE_WEBHOOK_SECRET
+from config import STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
 import stripe
 from services.credit_service import CreditService
 

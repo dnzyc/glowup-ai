@@ -11,6 +11,7 @@ Algorithms:
 - Region Masked Blending (Flame GMask / Nuke Roto)
 """
 
+import os
 import cv2
 import numpy as np
 from typing import List, Optional, Tuple, Union
@@ -127,8 +128,13 @@ class FlameDetailEnhance:
         sigma_r: float = 0.15,
     ) -> np.ndarray:
         """
-        OpenCV's built-in detail enhancement (similar to Nuke DetailTransfer).
+        OpenCV's built-in detailEnhance (Nuke DetailTransfer).
+        Handles both grayscale and 3-channel images.
         """
+        if image.ndim == 2:
+            gray_3ch = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+            enhanced = cv2.detailEnhance(gray_3ch, sigma_s, sigma_r)
+            return cv2.cvtColor(enhanced, cv2.COLOR_BGR2GRAY)
         return cv2.detailEnhance(image, sigma_s, sigma_r)
 
     @staticmethod
@@ -166,12 +172,22 @@ class FlameBlemishRemoval:
         ksize = max(3, int(strength / 10) * 2 + 1)
         median_smoothed = cv2.medianBlur(image, ksize)
 
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if image.ndim == 3 else image
+        if image.ndim == 3:
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        elif image.ndim == 2:
+            gray = image
+        else:
+            gray = image.squeeze()
+
         edges = cv2.Canny(gray, 15, 50)
 
         blend = strength / 100.0
         edge_mask = cv2.GaussianBlur(edges.astype(np.float32), (5, 5), 2) / 255.0
-        edge_mask = 1.0 - edge_mask[:, :, np.newaxis] if image.ndim == 3 else 1.0 - edge_mask
+        edge_mask = 1.0 - edge_mask
+
+        # Match edge_mask dimensions to image channels
+        if image.ndim == 3:
+            edge_mask = edge_mask[:, :, np.newaxis]
 
         result = image.astype(np.float32) * (1 - blend * (1 - edge_mask)) + \
                  median_smoothed.astype(np.float32) * blend * (1 - edge_mask)
@@ -298,21 +314,14 @@ class BeautyPipeline:
             mask = BeautyPipeline.generate_region_mask(result.shape, regions)
             mask = cv2.GaussianBlur(mask, (15, 15), 8)  # Feather edges
             mask_3ch = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR).astype(np.float32) / 255.0
-            result = (result.astype(np.float32) * (1.0 - mask_3ch) +
-                      original.astype(np.float32) * mask_3ch)
-            # Invert: mask = 1 where beauty should apply
-            result = original.astype(np.float32) * (1.0 - mask_3ch) + \
-                     result.astype(np.float32) * mask_3ch
-            # Wait, the above is wrong. Let me fix:
-            # result where mask=1 (inside region), original where mask=0 (outside)
-            # The beauty-processed "result" applies INSIDE the mask
-            # The "original" applies OUTSIDE the mask
-            final = (result.astype(np.float32) * mask_3ch +
-                     original.astype(np.float32) * (1.0 - mask_3ch))
-            result = np.clip(final, 0, 255).astype(np.uint8)
+            # Beauty-processed result INSIDE mask, original OUTSIDE mask
+            result = (result.astype(np.float32) * mask_3ch +
+                      original.astype(np.float32) * (1.0 - mask_3ch))
+            result = np.clip(result, 0, 255).astype(np.uint8)
 
         # --- Save Result ---
-        output_path = image_path.replace(".", "_beauty.")
+        base, ext = os.path.splitext(image_path)
+        output_path = f"{base}_beauty{ext}"
         cv2.imwrite(output_path, result)
         return output_path
 
