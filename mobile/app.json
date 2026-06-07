@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "GlowUp AI",
+    "slug": "glowup-ai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "scheme": "glowup",
+    "splash": { "backgroundColor": "#09090b" },
+    "ios": { "supportsTablet": true, "bundleIdentifier": "ai.glowup.app" },
+    "android": { "adaptiveIcon": { "backgroundColor": "#09090b" }, "package": "ai.glowup.app" },
+    "plugins": [
+      "expo-router",
+      "expo-camera",
+      "expo-image-picker",
+      "expo-notifications",
+      "expo-font"
+    ]
+  }
+}
