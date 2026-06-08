@@ -289,8 +289,11 @@ class BeautyPipeline:
 
         # --- Stage 2b: Inpainting Spot Removal ---
         if params.inpaint_spot > 0:
+            gray = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
+            _, spot_mask = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            radius = max(1, int(params.inpaint_spot / 10))
             result = FlameBlemishRemoval.inpaint_spot(
-                result, strength=params.inpaint_spot
+                result, mask=spot_mask, radius=radius
             )
 
         # --- Stage 3: High Pass Sharpen ---
@@ -304,14 +307,18 @@ class BeautyPipeline:
 
         # --- Stage 3b: Detail Enhancement ---
         if params.detail_enhance > 0:
+            sigma_s = max(1, params.detail_enhance / 10)
+            sigma_r = max(0.01, params.detail_enhance / 500)
             result = FlameDetailEnhance.detail_enhance(
-                result, strength=params.detail_enhance
+                result, sigma_s=sigma_s, sigma_r=sigma_r
             )
 
         # --- Stage 3c: Unsharp Mask ---
         if params.unsharp_mask > 0:
+            sigma = max(0.5, params.unsharp_mask / 20)
+            amount = params.unsharp_mask / 50
             result = FlameDetailEnhance.unsharp_mask(
-                result, strength=params.unsharp_mask
+                result, sigma=sigma, amount=amount
             )
 
         # --- Stage 4: Brightening ---
@@ -441,14 +448,21 @@ class BeautyPipeline:
         if params.blemish_removal > 0:
             result = FlameBlemishRemoval.remove_blemishes(result, strength=params.blemish_removal)
         if params.inpaint_spot > 0:
-            result = FlameBlemishRemoval.inpaint_spot(result, strength=params.inpaint_spot)
+            gray = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
+            _, spot_mask = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            radius = max(1, int(params.inpaint_spot / 10))
+            result = FlameBlemishRemoval.inpaint_spot(result, mask=spot_mask, radius=radius)
         sharpening = params.sharpening / 100.0
         if sharpening > 0:
             result = FlameDetailEnhance.high_pass_sharpen(result, radius=max(1.0, sharpening * 5), amount=sharpening * 0.5, threshold=2.0)
         if params.detail_enhance > 0:
-            result = FlameDetailEnhance.detail_enhance(result, strength=params.detail_enhance)
+            sigma_s = max(1, params.detail_enhance / 10)
+            sigma_r = max(0.01, params.detail_enhance / 500)
+            result = FlameDetailEnhance.detail_enhance(result, sigma_s=sigma_s, sigma_r=sigma_r)
         if params.unsharp_mask > 0:
-            result = FlameDetailEnhance.unsharp_mask(result, strength=params.unsharp_mask)
+            sigma = max(0.5, params.unsharp_mask / 20)
+            amount = params.unsharp_mask / 50
+            result = FlameDetailEnhance.unsharp_mask(result, sigma=sigma, amount=amount)
         brightening = params.brightening / 100.0
         if brightening > 0:
             hsv = cv2.cvtColor(result, cv2.COLOR_BGR2HSV).astype(np.float32)
