@@ -23,7 +23,7 @@ export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [regions, setRegions] = useState<Region[]>([]);
-  const [params, setParams] = useState<BeautyParams>({ smoothing: 50, brightening: 30, sharpening: 20, blemishRemoval: 0 });
+  const [params, setParams] = useState<BeautyParams>({ smoothing: 50, brightening: 30, sharpening: 20, blemishRemoval: 0, detailEnhance: 0, unsharpMask: 0, inpaintSpot: 0 });
   const [processing, setProcessing] = useState(false);
   const [autoDetect, setAutoDetect] = useState(true);
   const [livePreviewEnabled, setLivePreviewEnabled] = useState(false);
@@ -52,6 +52,10 @@ export default function UploadPage() {
     formData.append("brightening", String(params.brightening));
     formData.append("sharpening", String(params.sharpening));
     formData.append("blemish_removal", String(params.blemishRemoval));
+    formData.append("detail_enhance", String(params.detailEnhance));
+    formData.append("unsharp_mask", String(params.unsharpMask));
+    formData.append("inpaint_spot", String(params.inpaintSpot));
+    formData.append("regions", JSON.stringify(regions));
     if (isVideo) {
       formData.append("output_format", outputFormat);
     }

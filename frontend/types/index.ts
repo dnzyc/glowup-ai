@@ -13,6 +13,9 @@ export interface BeautyParams {
   brightening: number;
   sharpening: number;
   blemishRemoval: number;
+  detailEnhance: number;
+  unsharpMask: number;
+  inpaintSpot: number;
 }
 
 export interface Job {

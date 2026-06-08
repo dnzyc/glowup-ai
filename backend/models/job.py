@@ -16,6 +16,9 @@ class BeautyParams(BaseModel):
     brightening: int = 30
     sharpening: int = 20
     blemish_removal: int = 0
+    detail_enhance: int = 0
+    unsharp_mask: int = 0
+    inpaint_spot: int = 0
 
 class ProcessRequest(BaseModel):
     user_id: str

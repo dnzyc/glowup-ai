@@ -3,9 +3,10 @@ Process routes — local OpenCV beauty pipeline.
 No external API. No GPU server. No per-use cost.
 """
 import os
+import json
 import tempfile
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
-from models.job import ProcessRequest, BeautyParams
+from models.job import ProcessRequest, BeautyParams, Region
 from services.beauty_pipeline import BeautyPipeline
 from services.credit_service import CreditService, CREDIT_COSTS
 from supabase import create_client
@@ -28,6 +29,10 @@ async def process_media(
     brightening: int = Form(30),
     sharpening: int = Form(20),
     blemish_removal: int = Form(0),
+    detail_enhance: int = Form(0),
+    unsharp_mask: int = Form(0),
+    inpaint_spot: int = Form(0),
+    regions: str = Form("[]"),
 ):
     """
     Process uploaded photo/video through the Flame-grade beauty pipeline.
@@ -35,10 +40,14 @@ async def process_media(
     Pipeline (same order as Flame Beauty Box):
     1. Bilateral Surface Blur (skin smoothing)
     2. Blemish Removal (spot cleanup)
-    3. High Pass Sharpen (detail restoration)
-    4. Brightening (brightness in HSV space)
-    5. Edge-Preserving Polish (final smooth)
+    3. Inpainting Spot Removal (RotoPaint clone-brush)
+    4. Detail Enhancement (texture restore)
+    5. High Pass Sharpen (detail restoration)
+    6. Unsharp Mask (classic photographic sharpening)
+    7. Brightening (brightness in HSV space)
+    8. Edge-Preserving Polish (final smooth)
     
+    Region masking limits effects to user-selected zones (face, body, custom rectangles).
     No AI. No GPU. Pure math. Instant.
     """
     cost = CREDIT_COSTS.get(media_type, 1)
@@ -50,7 +59,12 @@ async def process_media(
         brightening=brightening,
         sharpening=sharpening,
         blemish_removal=blemish_removal,
+        detail_enhance=detail_enhance,
+        unsharp_mask=unsharp_mask,
+        inpaint_spot=inpaint_spot,
     )
+
+    region_list = [Region(**r) for r in json.loads(regions)] if regions and regions != "[]" else []
 
     # Save uploaded file
     ext = os.path.splitext(file.filename or "image.png")[1]
@@ -75,9 +89,9 @@ async def process_media(
 
     try:
         if media_type == "video":
-            output_path = BeautyPipeline.process_video(input_path, params, output_format=output_format)
+            output_path = BeautyPipeline.process_video(input_path, params, output_format=output_format, regions=region_list or None)
         else:
-            output_path = BeautyPipeline.process_photo(input_path, params)
+            output_path = BeautyPipeline.process_photo(input_path, params, regions=region_list or None)
 
         # Upload result to Supabase Storage
         result_filename = f"{user_id}/{job_data['id']}_result{ext}"

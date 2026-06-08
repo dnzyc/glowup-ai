@@ -15,6 +15,9 @@ const CONTROLS: { key: keyof BeautyParams; label: string }[] = [
   { key: "brightening", label: "Brightening" },
   { key: "sharpening", label: "Sharpening" },
   { key: "blemishRemoval", label: "Blemish Removal" },
+  { key: "detailEnhance", label: "Detail Enhance" },
+  { key: "unsharpMask", label: "Unsharp Mask" },
+  { key: "inpaintSpot", label: "Spot Removal" },
 ];
 
 export default function BeautyControls({ params, onChange }: Props) {

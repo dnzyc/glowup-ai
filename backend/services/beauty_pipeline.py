@@ -287,6 +287,12 @@ class BeautyPipeline:
                 result, strength=params.blemish_removal
             )
 
+        # --- Stage 2b: Inpainting Spot Removal ---
+        if params.inpaint_spot > 0:
+            result = FlameBlemishRemoval.inpaint_spot(
+                result, strength=params.inpaint_spot
+            )
+
         # --- Stage 3: High Pass Sharpen ---
         sharpening = params.sharpening / 100.0
         if sharpening > 0:
@@ -294,6 +300,18 @@ class BeautyPipeline:
             amount = sharpening * 0.5
             result = FlameDetailEnhance.high_pass_sharpen(
                 result, radius=radius, amount=amount, threshold=2.0
+            )
+
+        # --- Stage 3b: Detail Enhancement ---
+        if params.detail_enhance > 0:
+            result = FlameDetailEnhance.detail_enhance(
+                result, strength=params.detail_enhance
+            )
+
+        # --- Stage 3c: Unsharp Mask ---
+        if params.unsharp_mask > 0:
+            result = FlameDetailEnhance.unsharp_mask(
+                result, strength=params.unsharp_mask
             )
 
         # --- Stage 4: Brightening ---
@@ -422,9 +440,15 @@ class BeautyPipeline:
             result = FlameBeautyBox.surface_blur(result, d=d, sigma_color=smoothing * 150, sigma_space=smoothing * 150)
         if params.blemish_removal > 0:
             result = FlameBlemishRemoval.remove_blemishes(result, strength=params.blemish_removal)
+        if params.inpaint_spot > 0:
+            result = FlameBlemishRemoval.inpaint_spot(result, strength=params.inpaint_spot)
         sharpening = params.sharpening / 100.0
         if sharpening > 0:
             result = FlameDetailEnhance.high_pass_sharpen(result, radius=max(1.0, sharpening * 5), amount=sharpening * 0.5, threshold=2.0)
+        if params.detail_enhance > 0:
+            result = FlameDetailEnhance.detail_enhance(result, strength=params.detail_enhance)
+        if params.unsharp_mask > 0:
+            result = FlameDetailEnhance.unsharp_mask(result, strength=params.unsharp_mask)
         brightening = params.brightening / 100.0
         if brightening > 0:
             hsv = cv2.cvtColor(result, cv2.COLOR_BGR2HSV).astype(np.float32)
