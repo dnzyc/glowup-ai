@@ -51,6 +51,13 @@ async def process_media(
     No AI. No GPU. Pure math. Instant.
     """
     cost = CREDIT_COSTS.get(media_type, 1)
+    
+    # Auto-create profile with trial credits for new users
+    supabase = _get_supabase()
+    existing = supabase.table("profiles").select("id").eq("id", user_id).single().execute()
+    if not existing.data:
+        supabase.table("profiles").insert({"id": user_id, "credits": 10}).execute()
+    
     if not CreditService.deduct_credits(user_id, media_type):
         raise HTTPException(status_code=402, detail="Insufficient credits")
 

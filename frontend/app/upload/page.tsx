@@ -65,8 +65,13 @@ export default function UploadPage() {
       if (res.ok) {
         const job = await res.json();
         router.push(`/dashboard?job=${job.job_id}`);
+      } else {
+        const err = await res.json().catch(() => ({ detail: "Processing failed" }));
+        alert(`Error (${res.status}): ${err.detail}`);
       }
-    } catch {}
+    } catch (e: any) {
+      alert(`Connection error: ${e.message || "Could not reach server"}`);
+    }
     setProcessing(false);
   }
 
