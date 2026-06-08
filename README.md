@@ -533,9 +533,9 @@ GET /api/admin/stats
 
 | Tier | Price | Credits | Cost per Photo | Cost per Video |
 |---|---|---|---|---|
-| **Starter** | $5.00 | 10 | $0.50 | $2.50 |
-| **Pro** | $20.00 | 50 | $0.40 | $2.00 |
-| **Studio** | $50.00 | 150 | $0.33 | $1.67 |
+| **Starter** | $5 | 10 | $0.50 | $2.50 |
+| **Pro** | $20 | 50 | $0.40 | $2.00 |
+| **Studio** | $50 | 150 | $0.33 | $1.67 |
 
 New users receive **10 free credits** on signup.
 

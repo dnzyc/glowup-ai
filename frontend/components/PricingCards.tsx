@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Check, Sparkles } from "lucide-react";
 
 const PLANS = [
-  { name: "Starter", price: "$9.90", credits: 100, priceId: "price_1TfmUyPTpXR1yLhaKZKfd7HS", features: ["Photo beauty processing", "Face smoothing", "Region selection"] },
-  { name: "Pro", price: "$24.90", credits: 300, priceId: "price_1TfmV3PTpXR1yLhaqf7f86sU", features: ["Photo + Video", "Full region selection", "Advanced beauty params", "Priority queue"], highlight: true },
-  { name: "Studio", price: "$99.90", credits: 1000, priceId: "price_1TfmV5PTpXR1yLhajtqbWvpk", features: ["Everything in Pro", "4K exports", "Batch processing", "Custom presets"] },
+  { name: "Starter", price: "$5", credits: 10, priceId: process.env.NEXT_PUBLIC_STRIPE_STARTER_PRICE_ID || "price_starter", features: ["Photo beauty processing", "Face smoothing", "Region selection"], costPerPhoto: "$0.50", costPerVideo: "$2.50" },
+  { name: "Pro", price: "$20", credits: 50, priceId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID || "price_pro", features: ["Photo + Video", "Full region selection", "Advanced beauty params", "Priority queue"], highlight: true, costPerPhoto: "$0.40", costPerVideo: "$2.00" },
+  { name: "Studio", price: "$50", credits: 150, priceId: process.env.NEXT_PUBLIC_STRIPE_STUDIO_PRICE_ID || "price_studio", features: ["Everything in Pro", "4K exports", "Batch processing", "Custom presets"], costPerPhoto: "$0.33", costPerVideo: "$1.67" },
 ];
 
 export default function PricingCards() {
@@ -27,7 +27,8 @@ export default function PricingCards() {
           {plan.highlight && <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full mb-2 inline-block">Most Popular</span>}
           <h3 className="text-lg font-bold">{plan.name}</h3>
           <p className="text-3xl font-bold my-2">{plan.price}</p>
-          <p className="text-sm text-muted-foreground mb-4">{plan.credits} credits</p>
+          <p className="text-sm text-muted-foreground mb-1">{plan.credits} credits</p>
+          <p className="text-xs text-muted-foreground mb-4">{plan.costPerPhoto}/photo · {plan.costPerVideo}/video</p>
           <ul className="space-y-2 mb-6">
             {plan.features.map((f) => (<li key={f} className="flex items-center gap-2 text-sm"><Check className="w-4 h-4 text-green-500" /> {f}</li>))}
           </ul>
