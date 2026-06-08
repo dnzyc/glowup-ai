@@ -52,10 +52,14 @@ async def process_media(
     """
     cost = CREDIT_COSTS.get(media_type, 1)
     
-    # Auto-create profile with trial credits for new users
     supabase = _get_supabase()
-    existing = supabase.table("profiles").select("id").eq("id", user_id).single().execute()
-    if not existing.data:
+    
+    # Auto-create profile with trial credits for new users
+    try:
+        existing = supabase.table("profiles").select("id").eq("id", user_id).execute()
+        if not existing.data:
+            supabase.table("profiles").insert({"id": user_id, "credits": 10}).execute()
+    except Exception:
         supabase.table("profiles").insert({"id": user_id, "credits": 10}).execute()
     
     if not CreditService.deduct_credits(user_id, media_type):
@@ -80,7 +84,6 @@ async def process_media(
         input_path = tmp.name
 
     # Create job record
-    supabase = _get_supabase()
     job = (
         supabase.table("jobs")
         .insert({
