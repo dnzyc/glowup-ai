@@ -27,6 +27,7 @@ export default function UploadPage() {
   const [processing, setProcessing] = useState(false);
   const [autoDetect, setAutoDetect] = useState(true);
   const [livePreviewEnabled, setLivePreviewEnabled] = useState(false);
+  const [regionContainerSize, setRegionContainerSize] = useState({ w: 0, h: 0 });
   const [outputFormat, setOutputFormat] = useState("mp4");
   const [userId, setUserId] = useState<string>("");
   const router = useRouter();
@@ -83,7 +84,7 @@ export default function UploadPage() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
-            <RegionSelector imageUrl={previewUrl} regions={regions} onRegionsChange={setRegions} />
+            <RegionSelector imageUrl={previewUrl} regions={regions} onRegionsChange={setRegions} onContainerSize={(w, h) => setRegionContainerSize({ w, h })} />
             {isVideo && (
               <div className="bg-muted/50 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-3">
@@ -112,7 +113,7 @@ export default function UploadPage() {
                 onChange={(e) => setLivePreviewEnabled(e.target.checked)} />
               <label htmlFor="live-preview" className="text-sm cursor-pointer">Live preview beauty effects</label>
             </div>
-            {livePreviewEnabled && <LivePreview imageUrl={previewUrl!} params={params} enabled={livePreviewEnabled} regions={regions} />}
+            {livePreviewEnabled && <LivePreview imageUrl={previewUrl!} params={params} enabled={livePreviewEnabled} regions={regions} containerWidth={regionContainerSize.w} containerHeight={regionContainerSize.h} />}
           </div>
           <div className="space-y-4">
             <BeautyControls params={params} onChange={setParams} />

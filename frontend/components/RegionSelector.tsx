@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Region, REGION_PRESETS } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,28 +9,37 @@ interface Props {
   imageUrl: string;
   regions: Region[];
   onRegionsChange: (regions: Region[]) => void;
+  onContainerSize?: (w: number, h: number) => void;
 }
 
-export default function RegionSelector({ imageUrl, regions, onRegionsChange }: Props) {
+export default function RegionSelector({ imageUrl, regions, onRegionsChange, onContainerSize }: Props) {
   const [drawing, setDrawing] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [activePreset, setActivePreset] = useState("full_body");
+  const [containerSize, setContainerSize] = useState({ w: 0, h: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
 
-  function getContainerPos(e: React.MouseEvent): { x: number; y: number } {
+  useEffect(() => {
+    if (containerSize.w > 0 && containerSize.h > 0 && onContainerSize) {
+      onContainerSize(containerSize.w, containerSize.h);
+    }
+  }, [containerSize, onContainerSize]);
+
+  function getRelativePos(e: React.MouseEvent): { x: number; y: number } {
     const rect = containerRef.current!.getBoundingClientRect();
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
 
   function handleMouseDown(e: React.MouseEvent) {
-    const pos = getContainerPos(e);
+    const pos = getRelativePos(e);
     setStartPos(pos);
     setDrawing(true);
   }
 
   function handleMouseUp(e: React.MouseEvent) {
     if (!drawing) return;
-    const endPos = getContainerPos(e);
+    const endPos = getRelativePos(e);
     const w = Math.abs(endPos.x - startPos.x);
     const h = Math.abs(endPos.y - startPos.y);
     if (w < 10 || h < 10) { setDrawing(false); return; }
@@ -67,10 +76,17 @@ export default function RegionSelector({ imageUrl, regions, onRegionsChange }: P
       </div>
       <div ref={containerRef} className="relative border rounded-lg overflow-hidden bg-black">
         <img
+          ref={imgRef}
           src={imageUrl}
           alt="Preview"
           className="w-full object-contain"
           draggable={false}
+          onLoad={() => {
+            if (imgRef.current && containerRef.current) {
+              const rect = imgRef.current.getBoundingClientRect();
+              setContainerSize({ w: rect.width, h: rect.height });
+            }
+          }}
         />
         <div
           className="absolute inset-0 cursor-crosshair"

@@ -8,13 +8,16 @@ interface Props {
   params: BeautyParams;
   enabled: boolean;
   regions?: { x: number; y: number; width: number; height: number }[];
+  containerWidth?: number;
+  containerHeight?: number;
 }
 
-export default function LivePreview({ imageUrl, params, enabled, regions }: Props) {
+export default function LivePreview({ imageUrl, params, enabled, regions, containerWidth, containerHeight }: Props) {
   const sourceRef = useRef<HTMLCanvasElement>(null);
   const previewRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const rafRef = useRef<number>(0);
+  const containerDimRef = useRef({ w: 0, h: 0 });
 
   function applyEffects() {
     if (!enabled) return;
@@ -71,10 +74,10 @@ export default function LivePreview({ imageUrl, params, enabled, regions }: Prop
 
   function createRegionMask(w: number, h: number, regions: { x: number; y: number; width: number; height: number }[]): Float32Array {
     const mask = new Float32Array(w * h);
-    const imgW = previewRef.current!.width;
-    const imgH = previewRef.current!.height;
-    const scaleX = w / imgW;
-    const scaleY = h / imgH;
+    const srcW = containerDimRef.current.w || w;
+    const srcH = containerDimRef.current.h || h;
+    const scaleX = w / srcW;
+    const scaleY = h / srcH;
 
     for (const region of regions) {
       const x1 = Math.max(0, Math.floor(region.x * scaleX));
@@ -174,6 +177,12 @@ export default function LivePreview({ imageUrl, params, enabled, regions }: Prop
     applyEffects();
     rafRef.current = requestAnimationFrame(render);
   }, [params, enabled]);
+
+  useEffect(() => {
+    if (containerWidth && containerHeight) {
+      containerDimRef.current = { w: containerWidth, h: containerHeight };
+    }
+  }, [containerWidth, containerHeight]);
 
   useEffect(() => {
     if (!imgRef.current) {
