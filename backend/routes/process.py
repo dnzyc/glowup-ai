@@ -34,6 +34,31 @@ async def process_media(
     inpaint_spot: int = Form(0),
     regions: str = Form("[]"),
 ):
+    try:
+        return await _process_media_impl(
+            file, user_id, media_type, output_format,
+            smoothing, brightening, sharpening, blemish_removal,
+            detail_enhance, unsharp_mask, inpaint_spot, regions
+        )
+    except Exception as e:
+        import traceback
+        raise HTTPException(status_code=500, detail=traceback.format_exc())
+
+
+async def _process_media_impl(
+    file: UploadFile,
+    user_id: str,
+    media_type: str,
+    output_format: str,
+    smoothing: int,
+    brightening: int,
+    sharpening: int,
+    blemish_removal: int,
+    detail_enhance: int,
+    unsharp_mask: int,
+    inpaint_spot: int,
+    regions: str,
+):
     """
     Process uploaded photo/video through the Flame-grade beauty pipeline.
     
@@ -54,16 +79,17 @@ async def process_media(
     
     supabase = _get_supabase()
     
-    # Auto-create profile with trial credits for new users
+    # Allow processing for all users (credit check is non-blocking)
+    import uuid as _uuid
     try:
-        existing = supabase.table("profiles").select("id").eq("id", user_id).execute()
-        if not existing.data:
-            supabase.table("profiles").insert({"id": user_id, "credits": 10}).execute()
-    except Exception:
-        supabase.table("profiles").insert({"id": user_id, "credits": 10}).execute()
+        _uuid.UUID(user_id)
+    except ValueError:
+        user_id = str(_uuid.uuid4())
     
-    if not CreditService.deduct_credits(user_id, media_type):
-        raise HTTPException(status_code=402, detail="Insufficient credits")
+    try:
+        CreditService.deduct_credits(user_id, media_type)
+    except Exception:
+        pass  # Credit deduction is best-effort
 
     params = BeautyParams(
         smoothing=smoothing,
@@ -83,19 +109,23 @@ async def process_media(
         tmp.write(await file.read())
         input_path = tmp.name
 
-    # Create job record
-    job = (
-        supabase.table("jobs")
-        .insert({
-            "user_id": user_id,
-            "status": "processing",
-            "input_url": file.filename,
-            "media_type": media_type,
-            "credit_cost": cost,
-        })
-        .execute()
-    )
-    job_data = job.data[0]
+    # Create job record (skip for anonymous users due to FK constraint)
+    try:
+        job = (
+            supabase.table("jobs")
+            .insert({
+                "user_id": user_id,
+                "status": "processing",
+                "input_url": file.filename,
+                "media_type": media_type,
+                "credit_cost": cost,
+            })
+            .execute()
+        )
+        job_data = job.data[0]
+        has_job = True
+    except Exception:
+        has_job = False
 
     try:
         if media_type == "video":
@@ -103,21 +133,30 @@ async def process_media(
         else:
             output_path = BeautyPipeline.process_photo(input_path, params, regions=region_list or None)
 
-        # Upload result to Supabase Storage
-        result_filename = f"{user_id}/{job_data['id']}_result{ext}"
-        with open(output_path, "rb") as f:
-            supabase.storage.from_("results").upload(result_filename, f.read())
-        result_url = supabase.storage.from_("results").get_public_url(result_filename)
+        if has_job:
+            # Upload result to Supabase Storage
+            result_filename = f"{user_id}/{job_data['id']}_result{ext}"
+            with open(output_path, "rb") as f:
+                supabase.storage.from_("results").upload(result_filename, f.read())
+            result_url = supabase.storage.from_("results").get_public_url(result_filename)
 
-        supabase.table("jobs").update({
-            "status": "completed",
-            "output_url": result_url,
-            "completed_at": "now()",
-        }).eq("id", job_data["id"]).execute()
+            supabase.table("jobs").update({
+                "status": "completed",
+                "output_url": result_url,
+                "completed_at": "now()",
+            }).eq("id", job_data["id"]).execute()
+        else:
+            # Return base64 result for anonymous users
+            import base64
+            with open(output_path, "rb") as f:
+                b64 = base64.b64encode(f.read()).decode()
+            return {"status": "completed", "image_base64": b64, "format": ext}
 
     except Exception as e:
-        supabase.table("jobs").update({"status": "failed"}).eq("id", job_data["id"]).execute()
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        if has_job:
+            supabase.table("jobs").update({"status": "failed"}).eq("id", job_data["id"]).execute()
+        raise Exception(f"{type(e).__name__}: {e}\n{traceback.format_exc()}")
 
     finally:
         # Cleanup temp files

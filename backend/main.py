@@ -34,3 +34,26 @@ app.include_router(admin.router, prefix="/api")
 @app.get("/")
 def root():
     return {"status": "ok", "service": "GlowUp AI"}
+
+
+@app.get("/debug")
+def debug():
+    import config
+    return {
+        "supabase_url": bool(config.SUPABASE_URL),
+        "supabase_key": bool(config.SUPABASE_KEY),
+        "stripe_key": bool(config.STRIPE_SECRET_KEY),
+        "frontend_url": config.FRONTEND_URL,
+    }
+
+
+@app.get("/debug-db")
+def debug_db():
+    import traceback
+    from supabase import create_client
+    import config
+    try:
+        supabase = create_client(config.SUPABASE_URL, config.SUPABASE_KEY)
+        return {"client": "created"}
+    except Exception as e:
+        return {"error": f"{type(e).__name__}: {e}", "trace": traceback.format_exc()}
