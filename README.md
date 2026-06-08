@@ -267,7 +267,7 @@ docker run -p 8000:8000 \
   -e SUPABASE_SERVICE_KEY="..." \
   -e STRIPE_SECRET_KEY="..." \
   -e STRIPE_WEBHOOK_SECRET="..." \
-  -e FRONTEND_URL="https://glowup-ai.vercel.app" \
+  -e FRONTEND_URL="https://glowup-ai-chi.vercel.app" \
   glowup-backend
 ```
 

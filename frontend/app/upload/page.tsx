@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Uploader from "@/components/Uploader";
 import RegionSelector from "@/components/RegionSelector";
@@ -11,6 +11,7 @@ import PresetManager from "@/components/PresetManager";
 import { Button } from "@/components/ui/button";
 import { Region, BeautyParams } from "@/types";
 import { Sparkles, Film } from "lucide-react";
+import { createClient } from "@/lib/supabase";
 
 const VIDEO_FORMATS = [
   { value: "mp4", label: "MP4 (H.264)", desc: "Standard web video" },
@@ -27,7 +28,15 @@ export default function UploadPage() {
   const [autoDetect, setAutoDetect] = useState(true);
   const [livePreviewEnabled, setLivePreviewEnabled] = useState(false);
   const [outputFormat, setOutputFormat] = useState("mp4");
+  const [userId, setUserId] = useState<string>("");
   const router = useRouter();
+  const supabase = createClient();
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) setUserId(data.user.id);
+    });
+  }, []);
 
   const isVideo = file?.type.startsWith("video/");
 
@@ -37,7 +46,7 @@ export default function UploadPage() {
 
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("user_id", "anonymous");
+    formData.append("user_id", userId || "anonymous");
     formData.append("media_type", isVideo ? "video" : "photo");
     formData.append("smoothing", String(params.smoothing));
     formData.append("brightening", String(params.brightening));
