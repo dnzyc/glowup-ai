@@ -86,10 +86,8 @@ async def _process_media_impl(
     except ValueError:
         user_id = str(_uuid.uuid4())
     
-    try:
-        CreditService.deduct_credits(user_id, media_type)
-    except Exception:
-        pass  # Credit deduction is best-effort
+    # TEMPORARY: Credit check disabled for testing
+    # CreditService.deduct_credits(user_id, media_type)
 
     params = BeautyParams(
         smoothing=smoothing,

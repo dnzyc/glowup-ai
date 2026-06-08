@@ -7,9 +7,10 @@ interface Props {
   imageUrl: string;
   params: BeautyParams;
   enabled: boolean;
+  regions?: { x: number; y: number; width: number; height: number }[];
 }
 
-export default function LivePreview({ imageUrl, params, enabled }: Props) {
+export default function LivePreview({ imageUrl, params, enabled, regions }: Props) {
   const sourceRef = useRef<HTMLCanvasElement>(null);
   const previewRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
@@ -37,35 +38,66 @@ export default function LivePreview({ imageUrl, params, enabled }: Props) {
       const imageData = ctx.getImageData(0, 0, w, h);
       const data = imageData.data;
 
+      const hasRegions = regions && regions.length > 0;
+      const mask = hasRegions ? createRegionMask(w, h, regions!) : null;
+
       if (smoothing > 0.01) {
-        applyBoxBlur(data, w, h, Math.round(1 + smoothing * 8));
+        applyBoxBlur(data, w, h, Math.round(1 + smoothing * 8), mask);
       }
 
       if (blemishRemoval > 0.01) {
-        applyBlemishRemoval(data, w, h, Math.round(1 + blemishRemoval * 6));
+        applyBlemishRemoval(data, w, h, Math.round(1 + blemishRemoval * 6), mask);
       }
 
       if (brightening > 0.01) {
         for (let i = 0; i < data.length; i += 4) {
-          data[i] = Math.min(255, data[i] * (1 + brightening * 0.4));
-          data[i + 1] = Math.min(255, data[i + 1] * (1 + brightening * 0.4));
-          data[i + 2] = Math.min(255, data[i + 2] * (1 + brightening * 0.4));
+          const px = (i / 4) % w;
+          const py = Math.floor(i / 4 / w);
+          const alpha = mask ? mask[py * w + px] : 1;
+          if (alpha < 0.01) continue;
+          data[i] = Math.min(255, data[i] * (1 + brightening * 0.4) * alpha + data[i] * (1 - alpha));
+          data[i + 1] = Math.min(255, data[i + 1] * (1 + brightening * 0.4) * alpha + data[i + 1] * (1 - alpha));
+          data[i + 2] = Math.min(255, data[i + 2] * (1 + brightening * 0.4) * alpha + data[i + 2] * (1 - alpha));
         }
       }
 
       if (sharpening > 0.01) {
-        applyUnsharpMask(data, w, h, sharpening * 0.3, Math.round(1 + sharpening * 3));
+        applyUnsharpMask(data, w, h, sharpening * 0.3, Math.round(1 + sharpening * 3), mask);
       }
 
       ctx.putImageData(imageData, 0, 0);
     }
   }
 
-  function applyBoxBlur(data: Uint8ClampedArray, w: number, h: number, radius: number) {
+  function createRegionMask(w: number, h: number, regions: { x: number; y: number; width: number; height: number }[]): Float32Array {
+    const mask = new Float32Array(w * h);
+    const imgW = previewRef.current!.width;
+    const imgH = previewRef.current!.height;
+    const scaleX = w / imgW;
+    const scaleY = h / imgH;
+
+    for (const region of regions) {
+      const x1 = Math.max(0, Math.floor(region.x * scaleX));
+      const y1 = Math.max(0, Math.floor(region.y * scaleY));
+      const x2 = Math.min(w, Math.ceil((region.x + region.width) * scaleX));
+      const y2 = Math.min(h, Math.ceil((region.y + region.height) * scaleY));
+
+      for (let y = y1; y < y2; y++) {
+        for (let x = x1; x < x2; x++) {
+          mask[y * w + x] = 1;
+        }
+      }
+    }
+
+    return mask;
+  }
+
+  function applyBoxBlur(data: Uint8ClampedArray, w: number, h: number, radius: number, mask: Float32Array | null) {
     const copy = new Uint8ClampedArray(data);
     const r = Math.max(1, radius);
     for (let y = r; y < h - r; y++) {
       for (let x = r; x < w - r; x++) {
+        if (mask && mask[y * w + x] < 0.01) continue;
         let rSum = 0, gSum = 0, bSum = 0, count = 0;
         for (let dy = -r; dy <= r; dy++) {
           for (let dx = -r; dx <= r; dx++) {
@@ -84,11 +116,12 @@ export default function LivePreview({ imageUrl, params, enabled }: Props) {
     }
   }
 
-  function applyBlemishRemoval(data: Uint8ClampedArray, w: number, h: number, radius: number) {
+  function applyBlemishRemoval(data: Uint8ClampedArray, w: number, h: number, radius: number, mask: Float32Array | null) {
     const copy = new Uint8ClampedArray(data);
     const r = Math.max(1, radius);
     for (let y = r; y < h - r; y++) {
       for (let x = r; x < w - r; x++) {
+        if (mask && mask[y * w + x] < 0.01) continue;
         const idx = (y * w + x) * 4;
         const edge = detectEdge(copy, w, x, y);
         if (edge < 30) continue;
@@ -124,11 +157,16 @@ export default function LivePreview({ imageUrl, params, enabled }: Props) {
     return (dr + dg + db + ur + ug + ub) / 6;
   }
 
-  function applyUnsharpMask(data: Uint8ClampedArray, w: number, h: number, amount: number, radius: number) {
+  function applyUnsharpMask(data: Uint8ClampedArray, w: number, h: number, amount: number, radius: number, mask: Float32Array | null) {
     const blurred = new Uint8ClampedArray(data);
-    applyBoxBlur(blurred, w, h, radius);
-    for (let i = 0; i < data.length; i++) {
+    applyBoxBlur(blurred, w, h, radius, null);
+    for (let i = 0; i < data.length; i += 4) {
+      const px = i / 4 % w;
+      const py = Math.floor(i / 4 / w);
+      if (mask && mask[py * w + px] < 0.01) continue;
       data[i] = Math.min(255, Math.max(0, data[i] + (data[i] - blurred[i]) * amount));
+      data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + (data[i + 1] - blurred[i + 1]) * amount));
+      data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + (data[i + 2] - blurred[i + 2]) * amount));
     }
   }
 
