@@ -10,7 +10,7 @@ import FaceDetector from "@/components/FaceDetector";
 import PresetManager from "@/components/PresetManager";
 import { Button } from "@/components/ui/button";
 import { Region } from "@/types";
-import { defaultFrontendParams, toBackendParams, BeautyParams } from "@/lib/beauty-params-adapter";
+import { defaultParams, BeautyParams } from "@/lib/beauty-params-adapter";
 import { Sparkles, Film } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 
@@ -24,7 +24,7 @@ export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [regions, setRegions] = useState<Region[]>([]);
-  const [params, setParams] = useState<BeautyParams>(defaultFrontendParams());
+  const [params, setParams] = useState<BeautyParams>(defaultParams());
   const [processing, setProcessing] = useState(false);
   const [autoDetect, setAutoDetect] = useState(true);
   const [livePreviewEnabled, setLivePreviewEnabled] = useState(false);
@@ -50,14 +50,13 @@ export default function UploadPage() {
     formData.append("file", file);
     formData.append("user_id", userId || "anonymous");
     formData.append("media_type", isVideo ? "video" : "photo");
-    const backendParams = toBackendParams(params);
-    formData.append("smoothing", String(backendParams.smoothing));
-    formData.append("brightening", String(backendParams.brightening));
-    formData.append("sharpening", String(backendParams.sharpening));
-    formData.append("blemish_removal", String(backendParams.blemish_removal));
-    formData.append("detail_enhance", String(backendParams.detail_enhance));
-    formData.append("unsharp_mask", String(backendParams.unsharp_mask));
-    formData.append("inpaint_spot", String(backendParams.inpaint_spot));
+    formData.append("smoothing", String(params.smoothing));
+    formData.append("brightening", String(params.brightening));
+    formData.append("sharpening", String(params.sharpening));
+    formData.append("blemish_removal", String(params.blemish_removal));
+    formData.append("detail_enhance", String(params.detail_enhance));
+    formData.append("unsharp_mask", String(params.unsharp_mask));
+    formData.append("inpaint_spot", String(params.inpaint_spot));
     formData.append("regions", JSON.stringify(regions));
     if (isVideo) {
       formData.append("output_format", outputFormat);

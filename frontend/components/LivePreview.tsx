@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useCallback } from "react";
-import { BeautyParams as BackendBeautyParams, FrontendBeautyParams } from "@/lib/beauty-params-adapter";
+import { BeautyParams } from "@/lib/beauty-params-adapter";
 import { applyEffects, Region } from "@/lib/image-effects";
 
 interface Props {
   imageUrl: string;
-  params: FrontendBeautyParams;
+  params: BeautyParams;
   enabled: boolean;
   regions?: { x: number; y: number; width: number; height: number }[];
   containerWidth?: number;
@@ -36,7 +36,7 @@ export default function LivePreview({ imageUrl, params, enabled, regions, contai
     const smoothing = params.smoothing / 100;
     const brightening = params.brightening / 100;
     const sharpening = params.sharpening / 100;
-    const blemishRemoval = params.blemishRemoval / 100;
+    const blemishRemoval = params.blemish_removal / 100;
 
     if (smoothing > 0.01 || brightening > 0.01 || sharpening > 0.01 || blemishRemoval > 0.01) {
       const imageData = ctx.getImageData(0, 0, w, h);
@@ -57,10 +57,10 @@ export default function LivePreview({ imageUrl, params, enabled, regions, contai
         smoothing: params.smoothing,
         brightening: params.brightening,
         sharpening: params.sharpening,
-        blemish_removal: params.blemishRemoval,
-        detail_enhance: params.detailEnhance,
-        unsharp_mask: params.unsharpMask,
-        inpaint_spot: params.inpaintSpot,
+        blemish_removal: params.blemish_removal,
+        detail_enhance: params.detail_enhance,
+        unsharp_mask: params.unsharp_mask,
+        inpaint_spot: params.inpaint_spot,
       }, mappedRegions, srcW, srcH);
 
       ctx.putImageData(result, 0, 0);
@@ -71,7 +71,7 @@ export default function LivePreview({ imageUrl, params, enabled, regions, contai
     if (!enabled) return;
     applyEffectsToCanvas();
     rafRef.current = requestAnimationFrame(render);
-  }, [params.smoothing, params.brightening, params.sharpening, params.blemishRemoval, params.detailEnhance, params.unsharpMask, params.inpaintSpot, enabled, regions, containerWidth, containerHeight]);
+  }, [params.smoothing, params.brightening, params.sharpening, params.blemish_removal, params.detail_enhance, params.unsharp_mask, params.inpaint_spot, enabled, regions, containerWidth, containerHeight]);
 
   useEffect(() => {
     if (!enabled) return;
