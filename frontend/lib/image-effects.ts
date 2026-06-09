@@ -1,14 +1,8 @@
+import { BeautyParams as BackendBeautyParams } from "./beauty-params-adapter";
+
 const GlobalImageData = typeof ImageData !== "undefined" ? ImageData : undefined;
 
-export interface BeautyParams {
-  smoothing: number;
-  brightening: number;
-  sharpening: number;
-  blemish_removal: number;
-  detail_enhance: number;
-  unsharp_mask: number;
-  inpaint_spot: number;
-}
+export type BeautyParams = BackendBeautyParams;
 
 export interface Region {
   id: string;

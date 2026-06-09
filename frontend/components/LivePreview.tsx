@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useCallback } from "react";
-import { BeautyParams } from "@/types";
+import { BeautyParams as BackendBeautyParams, FrontendBeautyParams } from "@/lib/beauty-params-adapter";
 import { applyEffects, Region } from "@/lib/image-effects";
 
 interface Props {
   imageUrl: string;
-  params: BeautyParams;
+  params: FrontendBeautyParams;
   enabled: boolean;
   regions?: { x: number; y: number; width: number; height: number }[];
   containerWidth?: number;
