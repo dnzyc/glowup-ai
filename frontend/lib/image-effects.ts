@@ -160,7 +160,7 @@ export function applyBlemishRemoval(imageData: ImageData, amount: number): Image
   return result;
 }
 
-export function applyDetailEnhance(imageData: ImageData, amount: number): ImageData {
+export function applyDetailEnhance(imageData: ImageData, amount: number, mask: Float32Array | null = null): ImageData {
   const result = cloneImageData(imageData);
   const data = result.data;
   const w = imageData.width;
@@ -170,6 +170,7 @@ export function applyDetailEnhance(imageData: ImageData, amount: number): ImageD
 
   for (let y = 1; y < h - 1; y++) {
     for (let x = 1; x < w - 1; x++) {
+      if (mask && mask[y * w + x] < 0.01) continue;
       const idx = (y * w + x) * 4;
       const edge = detectEdge(copy, w, x, y);
       if (edge > 10) {
@@ -194,7 +195,7 @@ export function applyUnsharpMask(imageData: ImageData, amount: number): ImageDat
   return result;
 }
 
-export function applyInpaintSpot(imageData: ImageData, amount: number): ImageData {
+export function applyInpaintSpot(imageData: ImageData, amount: number, mask: Float32Array | null = null): ImageData {
   const result = cloneImageData(imageData);
   const data = result.data;
   const w = imageData.width;
@@ -204,6 +205,7 @@ export function applyInpaintSpot(imageData: ImageData, amount: number): ImageDat
 
   for (let y = radius; y < h - radius; y++) {
     for (let x = radius; x < w - radius; x++) {
+      if (mask && mask[y * w + x] < 0.01) continue;
       const idx = (y * w + x) * 4;
       const edge = detectEdge(copy, w, x, y);
       if (edge < 20) continue;
@@ -275,27 +277,35 @@ export function applyEffects(
 
   const detailEnhance = params.detail_enhance / 100;
   if (detailEnhance > 0.01) {
-    const enhanced = applyDetailEnhance(result, detailEnhance);
+    const enhanced = applyDetailEnhance(result, detailEnhance, mask);
     const srcData = result.data;
     const enhData = enhanced.data;
     for (let i = 0; i < srcData.length; i += 4) {
+      const px = (i / 4) % w;
+      const py = Math.floor(i / 4 / w);
+      const alpha = mask ? mask[py * w + px] : 1;
+      if (alpha < 0.01) continue;
       srcData[i] = enhData[i];
       srcData[i + 1] = enhData[i + 1];
       srcData[i + 2] = enhData[i + 2];
     }
   }
 
-  const unsharpMask = params.unsharp_mask / 100;
-  if (unsharpMask > 0.01) {
-    applyUnsharpMaskInternal(data, w, h, unsharpMask, Math.round(1 + unsharpMask * 3), mask);
+  const unsharpMaskVal = params.unsharp_mask / 100;
+  if (unsharpMaskVal > 0.01) {
+    applyUnsharpMaskInternal(data, w, h, unsharpMaskVal, Math.round(1 + unsharpMaskVal * 3), mask);
   }
 
   const inpaintSpot = params.inpaint_spot / 100;
   if (inpaintSpot > 0.01) {
-    const inpainted = applyInpaintSpot(result, inpaintSpot);
+    const inpainted = applyInpaintSpot(result, inpaintSpot, mask);
     const srcData = result.data;
     const inpData = inpainted.data;
     for (let i = 0; i < srcData.length; i += 4) {
+      const px = (i / 4) % w;
+      const py = Math.floor(i / 4 / w);
+      const alpha = mask ? mask[py * w + px] : 1;
+      if (alpha < 0.01) continue;
       srcData[i] = inpData[i];
       srcData[i + 1] = inpData[i + 1];
       srcData[i + 2] = inpData[i + 2];

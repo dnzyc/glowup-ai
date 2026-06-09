@@ -319,6 +319,54 @@ describe("applyEffects", () => {
     expect(outsidePixel).toBe(input.data[30 * 40 * 4 + 30 * 4]);
   });
 
+  it("respects region masking for detail_enhance", () => {
+    const input = createNoisyImageData(40, 40, 100);
+    const regions = [
+      { id: "face", name: "Face", x: 0, y: 0, width: 20, height: 20 },
+    ];
+    const output = applyEffects(input, {
+      smoothing: 0,
+      brightening: 0,
+      sharpening: 0,
+      blemish_removal: 0,
+      detail_enhance: 80,
+      unsharp_mask: 0,
+      inpaint_spot: 0,
+    }, regions, 40, 40);
+
+    const regionPixel = output.data[10 * 40 * 4 + 10 * 4];
+    const outsidePixel = output.data[30 * 40 * 4 + 30 * 4];
+    const inputRegion = input.data[10 * 40 * 4 + 10 * 4];
+    const inputOutside = input.data[30 * 40 * 4 + 30 * 4];
+
+    expect(regionPixel).not.toBe(inputRegion);
+    expect(outsidePixel).toBe(inputOutside);
+  });
+
+  it("respects region masking for inpaint_spot", () => {
+    const input = createNoisyImageData(40, 40, 100);
+    const regions = [
+      { id: "face", name: "Face", x: 0, y: 0, width: 20, height: 20 },
+    ];
+    const output = applyEffects(input, {
+      smoothing: 0,
+      brightening: 0,
+      sharpening: 0,
+      blemish_removal: 0,
+      detail_enhance: 0,
+      unsharp_mask: 0,
+      inpaint_spot: 80,
+    }, regions, 40, 40);
+
+    const regionPixel = output.data[10 * 40 * 4 + 10 * 4];
+    const outsidePixel = output.data[30 * 40 * 4 + 30 * 4];
+    const inputRegion = input.data[10 * 40 * 4 + 10 * 4];
+    const inputOutside = input.data[30 * 40 * 4 + 30 * 4];
+
+    expect(regionPixel).not.toBe(inputRegion);
+    expect(outsidePixel).toBe(inputOutside);
+  });
+
   it("does not mutate input", () => {
     const input = createNoisyImageData(50, 50);
     const original = new Uint8ClampedArray(input.data);
