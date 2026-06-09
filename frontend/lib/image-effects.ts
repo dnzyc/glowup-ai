@@ -46,7 +46,8 @@ function createRegionMask(w: number, h: number, regions: Region[], containerW: n
 }
 
 function detectEdge(data: Uint8ClampedArray, w: number, x: number, y: number): number {
-  if (x < 1 || y < 1 || x >= w - 1) return 0;
+  const h = data.length / 4 / w;
+  if (x < 1 || y < 1 || x >= w - 1 || y >= h - 1) return 0;
   const idx = (y * w + x) * 4;
   const left = ((y * w + (x - 1)) * 4);
   const up = (((y - 1) * w + x) * 4);
@@ -276,6 +277,35 @@ export function applyEffects(
 
   if (sharpening > 0.01) {
     applyUnsharpMaskInternal(data, w, h, sharpening * 0.3, Math.round(1 + sharpening * 3), mask);
+  }
+
+  const detailEnhance = params.detail_enhance / 100;
+  if (detailEnhance > 0.01) {
+    const enhanced = applyDetailEnhance(result, detailEnhance);
+    const srcData = result.data;
+    const enhData = enhanced.data;
+    for (let i = 0; i < srcData.length; i += 4) {
+      srcData[i] = enhData[i];
+      srcData[i + 1] = enhData[i + 1];
+      srcData[i + 2] = enhData[i + 2];
+    }
+  }
+
+  const unsharpMask = params.unsharp_mask / 100;
+  if (unsharpMask > 0.01) {
+    applyUnsharpMaskInternal(data, w, h, unsharpMask, Math.round(1 + unsharpMask * 3), mask);
+  }
+
+  const inpaintSpot = params.inpaint_spot / 100;
+  if (inpaintSpot > 0.01) {
+    const inpainted = applyInpaintSpot(result, inpaintSpot);
+    const srcData = result.data;
+    const inpData = inpainted.data;
+    for (let i = 0; i < srcData.length; i += 4) {
+      srcData[i] = inpData[i];
+      srcData[i + 1] = inpData[i + 1];
+      srcData[i + 2] = inpData[i + 2];
+    }
   }
 
   return result;

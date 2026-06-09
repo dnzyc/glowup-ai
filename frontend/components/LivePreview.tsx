@@ -68,15 +68,16 @@ export default function LivePreview({ imageUrl, params, enabled, regions, contai
   }
 
   const render = useCallback(() => {
+    if (!enabled) return;
     applyEffectsToCanvas();
     rafRef.current = requestAnimationFrame(render);
-  }, [params, enabled, regions, containerWidth, containerHeight]);
+  }, [params.smoothing, params.brightening, params.sharpening, params.blemishRemoval, params.detailEnhance, params.unsharpMask, params.inpaintSpot, enabled, regions, containerWidth, containerHeight]);
 
   useEffect(() => {
-    if (containerWidth && containerHeight) {
-      containerDimRef.current = { w: containerWidth, h: containerHeight };
-    }
-  }, [containerWidth, containerHeight]);
+    if (!enabled) return;
+    rafRef.current = requestAnimationFrame(render);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [enabled, render]);
 
   useEffect(() => {
     if (!imgRef.current) {
@@ -96,14 +97,21 @@ export default function LivePreview({ imageUrl, params, enabled, regions, contai
           preview.getContext("2d")!.drawImage(source, 0, 0);
         }
       };
+      img.onerror = (err) => {
+        console.error("Failed to load image:", imageUrl, err);
+        const preview = previewRef.current;
+        if (preview) {
+          const ctx = preview.getContext("2d")!;
+          ctx.fillStyle = "#1a1a1a";
+          ctx.fillRect(0, 0, preview.width, preview.height);
+          ctx.fillStyle = "#ff6b6b";
+          ctx.font = "14px sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText("Failed to load image", preview.width / 2, preview.height / 2);
+        }
+      };
     }
   }, [imageUrl]);
-
-  useEffect(() => {
-    if (!enabled) return;
-    rafRef.current = requestAnimationFrame(render);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [enabled, render]);
 
   return (
     <div className="relative">
