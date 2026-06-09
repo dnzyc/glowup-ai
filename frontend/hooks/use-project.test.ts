@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useProject } from "./use-project";
 import { defaultFrontendParams } from "@/lib/beauty-params-adapter";
 
 const mockPush = vi.fn();
@@ -12,20 +11,29 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/lib/supabase", () => ({
   createClient: () => ({
-    auth: { getUser: mockGetUser },
+    auth: { getUser: () => mockGetUser() },
   }),
 }));
 
 global.fetch = vi.fn();
 
+let useProject: typeof import("./use-project").useProject;
+
+const loadModule = async () => {
+  const mod = await import("./use-project");
+  useProject = mod.useProject;
+};
+
 const mockFile = new File(["test"], "test.jpg", { type: "image/jpeg" });
 const mockVideoFile = new File(["test"], "test.mp4", { type: "video/mp4" });
 
 describe("useProject", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    vi.resetModules();
     vi.clearAllMocks();
     mockGetUser.mockResolvedValue({ data: { user: null } });
     (global.fetch as any).mockResolvedValue({ ok: true, json: () => Promise.resolve({ job_id: "job123" }) });
+    await loadModule();
   });
 
   afterEach(() => {
@@ -126,7 +134,7 @@ describe("useProject", () => {
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/process`,
+      expect.stringContaining("/api/process"),
       expect.objectContaining({ method: "POST" })
     );
 

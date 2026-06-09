@@ -91,11 +91,15 @@ export default function UploadPage() {
           </div>
         </div>
       )}
-      <div className="flex items-center gap-2 mt-2">
-        <input type="checkbox" id="auto-detect" checked={autoDetect} onChange={(e) => setAutoDetect(e.target.checked)} />
-        <label htmlFor="auto-detect" className="text-xs cursor-pointer">Auto-detect face regions</label>
-      </div>
-      <FaceDetector imageUrl={previewUrl!} enabled={autoDetect} onRegionsDetected={(r) => setRegions(prev => prev.length === 0 ? r : prev)} />
+      {previewUrl && (
+        <div className="flex items-center gap-2 mt-2">
+          <input type="checkbox" id="auto-detect" checked={autoDetect} onChange={(e) => setAutoDetect(e.target.checked)} />
+          <label htmlFor="auto-detect" className="text-xs cursor-pointer">Auto-detect face regions</label>
+        </div>
+      )}
+      {previewUrl && (
+        <FaceDetector imageUrl={previewUrl} enabled={autoDetect} onRegionsDetected={(r) => setRegions(prev => prev.length === 0 ? r : prev)} />
+      )}
     </div>
   );
 }

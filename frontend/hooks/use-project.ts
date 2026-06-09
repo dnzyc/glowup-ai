@@ -6,6 +6,9 @@ import { Region, BeautyParams } from "@/types";
 import { defaultFrontendParams, toBackendParams } from "@/lib/beauty-params-adapter";
 import { createClient } from "@/lib/supabase";
 
+const supabase = createClient();
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 interface UseProjectReturn {
   file: File | null;
   previewUrl: string | null;
@@ -42,12 +45,11 @@ export function useProject(): UseProjectReturn {
   const [outputFormat, setOutputFormat] = useState("mp4");
   const [userId, setUserId] = useState<string>("");
   const router = useRouter();
-  const supabase = createClient();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) setUserId(data.user.id);
-    });
+    }).catch(() => {});
   }, []);
 
   const isVideo = file?.type.startsWith("video/") ?? false;
@@ -74,7 +76,7 @@ export function useProject(): UseProjectReturn {
     }
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/process`, { method: "POST", body: formData });
+      const res = await fetch(`${API_URL}/api/process`, { method: "POST", body: formData });
       if (res.ok) {
         const job = await res.json();
         router.push(`/dashboard?job=${job.job_id}`);
@@ -82,8 +84,9 @@ export function useProject(): UseProjectReturn {
         const err = await res.json().catch(() => ({ detail: "Processing failed" }));
         alert(`Error (${res.status}): ${err.detail}`);
       }
-    } catch (e: any) {
-      alert(`Connection error: ${e.message || "Could not reach server"}`);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      alert(`Connection error: ${message || "Could not reach server"}`);
     }
     setProcessing(false);
   }, [file, userId, isVideo, params, regions, outputFormat, router]);
