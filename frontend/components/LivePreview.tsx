@@ -176,7 +176,7 @@ export default function LivePreview({ imageUrl, params, enabled, regions, contai
   const render = useCallback(() => {
     applyEffects();
     rafRef.current = requestAnimationFrame(render);
-  }, [params, enabled]);
+  }, [params, enabled, regions, containerWidth, containerHeight]);
 
   useEffect(() => {
     if (containerWidth && containerHeight) {
