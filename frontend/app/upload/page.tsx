@@ -76,7 +76,7 @@ export default function UploadPage() {
                 onChange={(e) => setLivePreviewEnabled(e.target.checked)} />
               <label htmlFor="live-preview" className="text-sm cursor-pointer">Live preview beauty effects</label>
             </div>
-            {livePreviewEnabled && <LivePreview imageUrl={previewUrl!} params={toBackendParams(params)} enabled={livePreviewEnabled} regions={regions} containerWidth={regionContainerSize.w} containerHeight={regionContainerSize.h} />}
+            {livePreviewEnabled && <LivePreview imageUrl={previewUrl!} params={toBackendParams(params)} enabled={livePreviewEnabled} regions={regions} />}
           </div>
           <div className="space-y-4">
             <BeautyControls params={params} onChange={setParams} />

@@ -28,6 +28,8 @@ export default function FaceDetector({ imageUrl, onRegionsDetected, enabled }: P
           if (!img) return;
           const faces = await detector.detect(img);
           const regions: Region[] = [];
+          const imgW = img.naturalWidth || img.width;
+          const imgH = img.naturalHeight || img.height;
           faces.forEach((face: any, i: number) => {
             const box = face.boundingBox;
             const faceHeight = box.height;
@@ -35,9 +37,9 @@ export default function FaceDetector({ imageUrl, onRegionsDetected, enabled }: P
             const fx = box.x;
             const fy = box.y;
 
-            regions.push({ id: `face_${i}`, name: "face", label: "Face", x: fx, y: fy, width: faceWidth, height: faceHeight });
-            regions.push({ id: `forehead_${i}`, name: "forehead", label: "Forehead", x: fx, y: fy, width: faceWidth, height: faceHeight * 0.3 });
-            regions.push({ id: `under_eyes_${i}`, name: "under_eyes", label: "Under Eyes", x: fx + faceWidth * 0.1, y: fy + faceHeight * 0.35, width: faceWidth * 0.8, height: faceHeight * 0.2 });
+            regions.push({ id: `face_${i}`, name: "face", label: "Face", x: fx / imgW, y: fy / imgH, width: faceWidth / imgW, height: faceHeight / imgH });
+            regions.push({ id: `forehead_${i}`, name: "forehead", label: "Forehead", x: fx / imgW, y: fy / imgH, width: faceWidth / imgW, height: (faceHeight * 0.3) / imgH });
+            regions.push({ id: `under_eyes_${i}`, name: "under_eyes", label: "Under Eyes", x: (fx + faceWidth * 0.1) / imgW, y: (fy + faceHeight * 0.35) / imgH, width: (faceWidth * 0.8) / imgW, height: (faceHeight * 0.2) / imgH });
           });
           if (regions.length > 0) onRegionsDetected(regions);
         } else {

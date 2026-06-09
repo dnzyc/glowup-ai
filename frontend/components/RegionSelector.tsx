@@ -17,6 +17,7 @@ export default function RegionSelector({ imageUrl, regions, onRegionsChange, onC
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [activePreset, setActivePreset] = useState("full_body");
   const [containerSize, setContainerSize] = useState({ w: 0, h: 0 });
+  const [imageDisplayRect, setImageDisplayRect] = useState({ x: 0, y: 0, w: 0, h: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
 
@@ -27,8 +28,14 @@ export default function RegionSelector({ imageUrl, regions, onRegionsChange, onC
   }, [containerSize, onContainerSize]);
 
   function getRelativePos(e: React.MouseEvent): { x: number; y: number } {
-    const rect = containerRef.current!.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const containerRect = containerRef.current!.getBoundingClientRect();
+    const imgRect = imageDisplayRect;
+    const mx = e.clientX - containerRect.left - imgRect.x;
+    const my = e.clientY - containerRect.top - imgRect.y;
+    return {
+      x: mx / imgRect.w,
+      y: my / imgRect.h,
+    };
   }
 
   function handleMouseDown(e: React.MouseEvent) {
@@ -40,17 +47,16 @@ export default function RegionSelector({ imageUrl, regions, onRegionsChange, onC
   function handleMouseUp(e: React.MouseEvent) {
     if (!drawing) return;
     const endPos = getRelativePos(e);
+    const x = Math.min(startPos.x, endPos.x);
+    const y = Math.min(startPos.y, endPos.y);
     const w = Math.abs(endPos.x - startPos.x);
     const h = Math.abs(endPos.y - startPos.y);
-    if (w < 10 || h < 10) { setDrawing(false); return; }
+    if (w < 0.02 || h < 0.02) { setDrawing(false); return; }
     const newRegion: Region = {
       id: `${activePreset}_${Date.now()}`,
       name: activePreset,
       label: REGION_PRESETS.find((p) => p.id === activePreset)?.label || activePreset,
-      x: Math.min(startPos.x, endPos.x),
-      y: Math.min(startPos.y, endPos.y),
-      width: w,
-      height: h,
+      x, y, width: w, height: h,
     };
     onRegionsChange([...regions, newRegion]);
     setDrawing(false);
@@ -84,7 +90,14 @@ export default function RegionSelector({ imageUrl, regions, onRegionsChange, onC
           onLoad={() => {
             if (imgRef.current && containerRef.current) {
               const rect = imgRef.current.getBoundingClientRect();
+              const containerRect = containerRef.current.getBoundingClientRect();
               setContainerSize({ w: rect.width, h: rect.height });
+              setImageDisplayRect({
+                x: rect.left - containerRect.left,
+                y: rect.top - containerRect.top,
+                w: rect.width,
+                h: rect.height,
+              });
             }
           }}
         />
@@ -98,10 +111,10 @@ export default function RegionSelector({ imageUrl, regions, onRegionsChange, onC
             key={region.id}
             className="absolute border-2 border-primary bg-primary/20"
             style={{
-              left: region.x,
-              top: region.y,
-              width: region.width,
-              height: region.height,
+              left: imageDisplayRect.x + region.x * imageDisplayRect.w,
+              top: imageDisplayRect.y + region.y * imageDisplayRect.h,
+              width: region.width * imageDisplayRect.w,
+              height: region.height * imageDisplayRect.h,
             }}
           >
             <Badge
